@@ -1,0 +1,18 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 基础工具
+RUN apt-get update && apt-get install -y \
+    build-essential cmake ninja-build pkg-config python3 git curl unzip \
+    openjdk-17-jdk \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+ARG HTTPS_PROXY
+
+ENV https_proxy=${HTTPS_PROXY}
+RUN git clone https://code.qt.io/qt/qt5.git -b 6.4.2 --single-branch qt6
+RUN cd ./qt6 && ./init-repository
+

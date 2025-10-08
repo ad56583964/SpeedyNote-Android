@@ -45,5 +45,30 @@ RUN yes | sdkmanager --sdk_root=${ANDROID_SDK_ROOT} \
 # 预留工作目录
 WORKDIR /workspace
 
+COPY --from=qt6-android-build:0.0.1 /workspace/qt6 /opt/qt6
+
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-dev libglu1-mesa-dev mesa-common-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/qt6-host-build && cd /opt/qt6-host-build && \ 
+../qt6/configure -prefix /opt/qt6-install -skip qt3d -skip qtpdf -cmake-generator "Ninja"
+
+RUN cd /opt/qt6-host-build && cmake --build . -j
+
+RUN cd /opt/qt6-host-build && cmake --install .
+
+RUN mkdir -p /opt/qt6-android-arm64-build && cd /opt/qt6-android-arm64-build && \
+../qt6/configure -prefix /opt/qt6-android-arm64 -qt-host-path /opt/qt6-install \
+    -android-sdk $ANDROID_SDK_ROOT \
+    -android-ndk $ANDROID_NDK_ROOT \
+    -android-abis arm64-v8a \
+    -android-ndk-platform android-23 \
+    -cmake-generator "Ninja" -release \
+    -nomake tests -nomake examples \
+    -skip qtwebengine -skip qtpdf
+RUN cd /opt/qt6-android-arm64-build && cmake --build . -j
+RUN cd /opt/qt6-android-arm64-build && cmake --install .
+
 # 默认进入 bash，方便使用者继续构建
 CMD ["/bin/bash"]

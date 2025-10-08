@@ -6,6 +6,9 @@ build-container:
 	-f Dockerfile.demo-android-base .
 
 start-container:
-	docker run -it --rm 
+	docker run -it --rm \
+	-v $$(realpath ${CURDIR}/../):/workspace \
+	demo-android-env:0.0.1 \
+	bash
 
 .PHONY: build-container start-container
