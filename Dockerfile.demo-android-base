@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 基础工具
+RUN apt-get update && apt-get install -y \
+    build-essential cmake ninja-build pkg-config python3 git curl unzip \
+    openjdk-17-jdk \
+    && rm -rf /var/lib/apt/lists/*
+
+# 设置 SDK/NDK 路径
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+ENV ANDROID_NDK_ROOT=/opt/android-sdk/ndk/25.2.9519653
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV PATH=$JAVA_HOME/bin:$ANDROID_SDK_ROOT/cmdline-tools/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
+
+# 安装 Android command-line tools
+RUN mkdir -p ${ANDROID_SDK_ROOT}/cmdline-tools && \
+    curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip
+RUN unzip -q /tmp/cmdtools.zip -d ${ANDROID_SDK_ROOT}/ && \
+    rm -f /tmp/cmdtools.zip
+
+# Optional proxy settings (pass via --build-arg to avoid hardcoding secrets)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
+ENV http_proxy=${HTTP_PROXY} \
+    https_proxy=${HTTPS_PROXY} \
+    HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    no_proxy=${NO_PROXY} \
+    NO_PROXY=${NO_PROXY}
+
+
+# 安装需要的 SDK 组件
+RUN yes | sdkmanager --sdk_root=${ANDROID_SDK_ROOT} \
+    "platform-tools" \
+    "build-tools;33.0.2" \
+    "platforms;android-32" \
+    "ndk;25.2.9519653" && \
+    yes | sdkmanager --sdk_root=${ANDROID_SDK_ROOT} --licenses
+
+# 预留工作目录
+WORKDIR /workspace
+
+# 默认进入 bash，方便使用者继续构建
+CMD ["/bin/bash"]
