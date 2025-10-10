@@ -1,2 +1,3 @@
 /build-android/
 /.claude/
+.build.env
