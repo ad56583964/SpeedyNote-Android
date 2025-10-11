@@ -18,7 +18,7 @@ build-container:
 
 start-container:
 	docker run -it --rm \
-	-v 
+	-v ${CURDIR}:/workspace \
 	demo-android:0.0.1 \
 	bash
 
