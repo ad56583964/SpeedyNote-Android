@@ -1,7 +1,7 @@
 FROM demo-android-env:0.0.1
 
-COPY src /workspace/src
-WORKDIR /workspace/src
+COPY src /opt/src
+WORKDIR /opt/src
 ENV QT_ANDROID_CMAKE=/opt/qt6-android-arm64/bin/qt-cmake
 
 ARG HTTPS_URL

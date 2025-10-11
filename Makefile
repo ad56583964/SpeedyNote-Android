@@ -14,10 +14,11 @@ build-container:
 	docker build -t demo-android:0.0.1 \
 	$(DOCKER_BUILD_ARGS) \
 	.
-	mkdir -p output && docker run --rm demo-android:0.0.1 cat /workspace/src/build-android/android-build/AndroidHello.apk > output/AndroidHello.apk
+	mkdir -p output && docker run --rm demo-android:0.0.1 cat /opt/src/build-android/android-build/AndroidHello.apk > output/AndroidHello.apk
 
 start-container:
 	docker run -it --rm \
+	-v 
 	demo-android:0.0.1 \
 	bash
 
