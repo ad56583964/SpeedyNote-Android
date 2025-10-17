@@ -12,6 +12,11 @@ ARG FREETYPE_VERSION=2.13.2
 ARG HARFBUZZ_VERSION=9.0.0
 ARG LCMS2_VERSION=2.16
 ARG OPENJPEG_VERSION=2.5.2
+ARG LIBTIFF_VERSION=4.6.0
+ARG LIBCURL_VERSION=8.10.1
+ARG OPENSSL_VERSION=3.2.2
+ARG QT6_ANDROID_PREFIX=/opt/qt6-android-arm64
+ARG POPPLER_REF=poppler-24.02.0
 
 ENV ANDROID_NDK_ROOT=${ANDROID_NDK_ROOT}
 ENV NDK_ROOT=${ANDROID_NDK_ROOT}
@@ -23,6 +28,9 @@ ENV INSTALL_PREFIX=${INSTALL_PREFIX}
 ENV TOOLCHAIN_DIR=${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64
 ENV TOOLCHAIN_BIN=${TOOLCHAIN_DIR}/bin
 ENV PATH=${TOOLCHAIN_BIN}:${PATH}
+ENV QT6_ANDROID_PREFIX=${QT6_ANDROID_PREFIX}
+ENV POPPLER_SRC=/opt/third-party/poppler
+ENV POPPLER_BUILD_DIR=/opt/third-party/build/poppler
 
 RUN mkdir -p /opt/third-party
 WORKDIR /opt/third-party
@@ -32,6 +40,11 @@ COPY harfbuzz-crossfile.ini /opt/third-party/config/harfbuzz-crossfile.ini
 RUN git clone https://github.com/libjpeg-turbo/libjpeg-turbo.git \
     --branch ${LIBJPEG_REF} \
     --depth 1
+
+RUN git clone https://gitlab.freedesktop.org/poppler/poppler.git \
+    --branch ${POPPLER_REF} \
+    --depth 1 \
+    "${POPPLER_SRC}"
 
 RUN apt-get update && \
     apt-get install -y autoconf automake libtool pkg-config cmake ninja-build meson python3 curl xz-utils gettext-base && \
@@ -194,3 +207,114 @@ RUN set -eux; \
     cmake --build "openjpeg-${OPENJPEG_VERSION}/build" -j"$(nproc)"; \
     cmake --install "openjpeg-${OPENJPEG_VERSION}/build"; \
     rm -rf /tmp/openjpeg.tar.gz "/tmp/openjpeg-${OPENJPEG_VERSION}"
+
+RUN set -eux; \
+    export PATH="${TOOLCHAIN_BIN}:${PATH}"; \
+    cd /tmp; \
+    curl -fsSL "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz; \
+    tar xf openssl.tar.gz; \
+    cd "openssl-${OPENSSL_VERSION}"; \
+    ./Configure android-arm64 \
+        --prefix="${INSTALL_PREFIX}" \
+        --openssldir="${INSTALL_PREFIX}/ssl" \
+        no-shared \
+        no-tests; \
+    make -j"$(nproc)"; \
+    make install_sw; \
+    rm -rf /tmp/openssl.tar.gz "/tmp/openssl-${OPENSSL_VERSION}"
+
+RUN set -eux; \
+    export PATH="${TOOLCHAIN_BIN}:${PATH}"; \
+    export CPPFLAGS="-I${INSTALL_PREFIX}/include"; \
+    export LDFLAGS="-L${INSTALL_PREFIX}/lib"; \
+    cd /tmp; \
+    curl -fsSL "https://download.osgeo.org/libtiff/tiff-${LIBTIFF_VERSION}.tar.gz" -o libtiff.tar.gz; \
+    tar xf libtiff.tar.gz; \
+    cd "tiff-${LIBTIFF_VERSION}"; \
+    ./configure \
+        --host="${TARGET_TRIPLE}" \
+        --prefix="${INSTALL_PREFIX}" \
+        --enable-static \
+        --disable-shared \
+        --disable-lzma \
+        --disable-webp \
+        --disable-jbig; \
+    make -j"$(nproc)"; \
+    make install; \
+    rm -rf /tmp/libtiff.tar.gz "/tmp/tiff-${LIBTIFF_VERSION}"
+
+RUN set -eux; \
+    export PATH="${TOOLCHAIN_BIN}:${PATH}"; \
+    export CPPFLAGS="-I${INSTALL_PREFIX}/include"; \
+    export LDFLAGS="-L${INSTALL_PREFIX}/lib"; \
+    export PKG_CONFIG_LIBDIR="${PKG_CONFIG_LIBDIR}"; \
+    cd /tmp; \
+    curl -fsSL "https://curl.se/download/curl-${LIBCURL_VERSION}.tar.xz" -o curl.tar.xz; \
+    tar xf curl.tar.xz; \
+    cd "curl-${LIBCURL_VERSION}"; \
+    ./configure \
+        --host="${TARGET_TRIPLE}" \
+        --prefix="${INSTALL_PREFIX}" \
+        --enable-static \
+        --disable-shared \
+        --without-nghttp2 \
+        --without-libidn2 \
+        --without-libpsl \
+        --without-brotli \
+        --without-zstd \
+        --with-ssl="${INSTALL_PREFIX}" \
+        --with-zlib="${INSTALL_PREFIX}" \
+        --disable-ldap \
+        --disable-manual \
+        --disable-rtsp; \
+    make -j"$(nproc)"; \
+    make install; \
+    rm -rf /tmp/curl.tar.xz "/tmp/curl-${LIBCURL_VERSION}"
+
+RUN set -eux; \
+    export PATH="${TOOLCHAIN_BIN}:${PATH}"; \
+    export PKG_CONFIG_LIBDIR="${PKG_CONFIG_LIBDIR}"; \
+    export PKG_CONFIG_PATH="${PKG_CONFIG_LIBDIR}"; \
+    cmake -S "${POPPLER_SRC}" -B "${POPPLER_BUILD_DIR}" \
+        -G Ninja \
+        -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake" \
+        -DANDROID_ABI="${ANDROID_ABI}" \
+        -DANDROID_PLATFORM=android-${ANDROID_API} \
+        -DANDROID_STL=c++_static \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
+        -DCMAKE_PREFIX_PATH="${INSTALL_PREFIX};${QT6_ANDROID_PREFIX}" \
+        -DCMAKE_FIND_ROOT_PATH="${INSTALL_PREFIX};${QT6_ANDROID_PREFIX}" \
+        -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY \
+        -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+        -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+        -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DENABLE_UNSTABLE_API_ABI_HEADERS=OFF \
+        -DENABLE_UTILS=OFF \
+        -DENABLE_CPP=OFF \
+        -DENABLE_GLIB=OFF \
+        -DENABLE_QT5=OFF \
+        -DENABLE_QT6=ON \
+        -DENABLE_GPGME=OFF \
+        -DENABLE_NSS3=OFF \
+        -DENABLE_BOOST=OFF \
+        -DENABLE_LIBOPENJPEG=openjpeg2 \
+        -DENABLE_LIBCURL=ON \
+        -DENABLE_LIBTIFF=ON \
+        -DENABLE_LCMS=ON \
+        -DENABLE_ZLIB_UNCOMPRESS=OFF \
+        -DRUN_GPERF_IF_PRESENT=OFF \
+        -DBUILD_GTK_TESTS=OFF \
+        -DBUILD_CPP_TESTS=OFF \
+        -DBUILD_QT5_TESTS=OFF \
+        -DBUILD_QT6_TESTS=OFF \
+        -DBUILD_MANUAL_TESTS=OFF \
+        -DWITH_FONTCONFIGURATION_WIN32=OFF \
+        -DWITH_FONTCONFIGURATION_FONTCONFIG=OFF \
+        -DWITH_FONTCONFIGURATION_ANDROID=ON \
+        -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config \
+        -DQt6_DIR="${QT6_ANDROID_PREFIX}/lib/cmake/Qt6"; \
+    cmake --build "${POPPLER_BUILD_DIR}" -j"$(nproc)"; \
+    cmake --install "${POPPLER_BUILD_DIR}"; \
+    rm -rf "${POPPLER_BUILD_DIR}" "${POPPLER_SRC}"
