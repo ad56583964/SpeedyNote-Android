@@ -1,0 +1,18 @@
+# Conan 2 host profile for Android arm64-v8a (NDK 25.2)
+[settings]
+os=Android
+os.api_level=23
+arch=armv8
+compiler=clang
+compiler.version=14
+compiler.libcxx=c++_shared
+build_type=Debug
+
+[conf]
+# Point Conan toolchain to the preinstalled SDK/NDK in base image
+tools.android:sdk_path=/opt/android-sdk
+tools.android:ndk_path=/opt/android-sdk/ndk/25.2.9519653
+# Use Ninja and keep generator consistent
+tools.cmake.cmaketoolchain:generator=Ninja
+# Enable CMake find_package for Conan packages
+tools.cmake.cmakedeps:cmake_find_mode=both

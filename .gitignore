@@ -1,0 +1,23 @@
+# Build artifacts
+/build/
+/build-*/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+
+# Conan generated files in the build folder
+conanbuild*
+conan_toolchain.cmake
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
