@@ -6,13 +6,11 @@ arch=armv8
 compiler=clang
 compiler.version=14
 compiler.libcxx=c++_shared
+compiler.cppstd=17
 build_type=Debug
 
 [conf]
-# Point Conan toolchain to the preinstalled SDK/NDK in base image
-tools.android:sdk_path=/opt/android-sdk
+# Point Conan toolchain to the preinstalled NDK in base image
 tools.android:ndk_path=/opt/android-sdk/ndk/25.2.9519653
 # Use Ninja and keep generator consistent
 tools.cmake.cmaketoolchain:generator=Ninja
-# Enable CMake find_package for Conan packages
-tools.cmake.cmakedeps:cmake_find_mode=both

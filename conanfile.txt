@@ -2,13 +2,15 @@
 zlib/1.3.1
 libpng/1.6.43
 freetype/2.13.2
-harfbuzz/9.0.0
+# Use a version range to pick an available HarfBuzz on ConanCenter (avoid 9.x if missing)
+harfbuzz/[>=7.0.0 <9.0.0]
 lcms/2.16
 openjpeg/2.5.2
 libtiff/4.6.0
 libjpeg-turbo/3.0.2
 openssl/3.2.2
-curl/8.10.1
+# libcurl package name on ConanCenter is 'libcurl' (not 'curl')
+libcurl/[>=7.80 <9.0.0]
 # poppler: ConanCenter typically lacks a Qt6-enabled Android build; we keep it out for now.
 
 [generators]
@@ -19,15 +21,12 @@ CMakeToolchain
 cmake_layout
 
 [options]
-# Turn on useful linkages/features; adjust as needed
-harfbuzz:*with_freetype=True
-freetype:*with_png=True
-libtiff:*with_lzma=False
-curl:*with_openssl=True
-curl:*with_zstd=False
-curl:*with_brotli=False
-
-[conf]
-tools.cmake.cmaketoolchain:generator=Ninja
-# Avoid running tests in recipes
-tools.build:skip_test=True
+# Trim heavy optional deps and align with our previous stack
+harfbuzz/*:with_glib=False
+harfbuzz/*:with_freetype=True
+freetype/*:with_png=True
+libtiff/*:lzma=False
+libtiff/*:jpeg=libjpeg-turbo
+libcurl/*:with_openssl=True
+libcurl/*:with_brotli=False
+libcurl/*:with_zstd=False
