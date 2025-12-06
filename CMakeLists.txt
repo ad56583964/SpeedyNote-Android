@@ -36,6 +36,8 @@ target_link_libraries(conan_aggregate PRIVATE
 # ---------------------------
 # Qt Widgets Hello (Android)
 # ---------------------------
+option(ANDROID_CONAN_ENABLE_QTHELLO "Build QtHello example" OFF)
+if(ANDROID_CONAN_ENABLE_QTHELLO)
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Widgets)
 
 qt_add_executable(QtHello
@@ -49,3 +51,44 @@ target_link_libraries(QtHello PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
 
 # Ensure we build position-independent code for shared libs
 set_target_properties(QtHello PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# ---------------------------
+# SpeedyNote (Qt Widgets) — Poppler REQUIRED
+# ---------------------------
+# This build requires Poppler (Qt6) from an external Android sysroot.
+# Provide it via -D SPEEDYNOTE_POPPLER_SYSROOT=/absolute/path or
+# environment variable SPEEDYNOTE_POPPLER_SYSROOT. Build will fail if missing.
+
+set(SPEEDYNOTE_SRC_DIR "${SPEEDYNOTE_SRC_DIR}" CACHE PATH "SpeedyNote source dir")
+if(NOT SPEEDYNOTE_SRC_DIR)
+    get_filename_component(SPEEDYNOTE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../SpeedyNote" ABSOLUTE)
+else()
+    set(SPEEDYNOTE_SRC "${SPEEDYNOTE_SRC_DIR}")
+endif()
+if(EXISTS "${SPEEDYNOTE_SRC}/CMakeLists.txt")
+    message(STATUS "Including SpeedyNote from: ${SPEEDYNOTE_SRC}")
+    # Force Poppler usage
+    set(SPEEDYNOTE_ENABLE_POPPLER ON CACHE BOOL "" FORCE)
+    set(SPEEDYNOTE_ENABLE_SDL OFF CACHE BOOL "" )
+    set(SPEEDYNOTE_ENABLE_AUDIO OFF CACHE BOOL "" )
+
+    # Resolve Poppler sysroot
+    if(NOT SPEEDYNOTE_POPPLER_SYSROOT AND DEFINED ENV{SPEEDYNOTE_POPPLER_SYSROOT})
+        set(SPEEDYNOTE_POPPLER_SYSROOT "$ENV{SPEEDYNOTE_POPPLER_SYSROOT}")
+    endif()
+    if(NOT SPEEDYNOTE_POPPLER_SYSROOT)
+        # Default to sibling folder in build space
+        set(SPEEDYNOTE_POPPLER_SYSROOT "${CMAKE_CURRENT_LIST_DIR}/../poppler-android-sysroot")
+    endif()
+    if(NOT EXISTS "${SPEEDYNOTE_POPPLER_SYSROOT}")
+        message(FATAL_ERROR "Poppler sysroot not found: '${SPEEDYNOTE_POPPLER_SYSROOT}'. Set -D SPEEDYNOTE_POPPLER_SYSROOT=/path or env SPEEDYNOTE_POPPLER_SYSROOT.")
+    endif()
+
+    # Surface for child project
+    set(SPEEDYNOTE_POPPLER_SYSROOT "${SPEEDYNOTE_POPPLER_SYSROOT}" CACHE PATH "" FORCE)
+
+    add_subdirectory("${SPEEDYNOTE_SRC}" "${CMAKE_BINARY_DIR}/SpeedyNote")
+else()
+    message(WARNING "SpeedyNote source not found at: ${SPEEDYNOTE_SRC}")
+endif()

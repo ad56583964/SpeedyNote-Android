@@ -1,3 +1,5 @@
+build-image:
+	docker build -t $(IMAGE) $(DOCKER_BUILD_ARGS) .
 ENV_FILE ?= $(CURDIR)/../.build.env
 -include $(ENV_FILE)
 export
@@ -29,38 +31,54 @@ endif
 ifdef NO_PROXY
 DOCKER_RUN_ENV += -e NO_PROXY=$(NO_PROXY) -e no_proxy=$(NO_PROXY)
 endif
+ifdef SPEEDYNOTE_POPPLER_SYSROOT
+DOCKER_RUN_ENV += -e SPEEDYNOTE_POPPLER_SYSROOT=$(SPEEDYNOTE_POPPLER_SYSROOT)
+endif
 
-.PHONY: help build-image shell build profile-detect clean
+.PHONY: help build-image enter-container \
+        in-conan in-configure in-buildonly in-apk in-build in-build-poppler in-profile-detect in-clean
 
 help:
-	@echo "Targets:"
-	@echo "  build-image     Build $(IMAGE) with optional proxy args"
-	@echo "  shell           Run container and drop into bash at $(WORKDIR)"
-	@echo "  build           Run ./build.sh inside container"
-	@echo "  profile-detect  Run 'conan profile detect --force' inside container"
-	@echo "  clean           Remove local build folder (android-conan/build)"
+	@echo "Commands (container-focused):"
+	@echo "  build-image          Build $(IMAGE) with optional proxy args"
+	@echo "  enter-container      Start interactive container at $(WORKDIR)"
+	@echo "  in-conan             ./conan-install.sh"
+	@echo "  in-configure         ./configure.sh"
+	@echo "  in-buildonly         cmake --build --preset conan-debug --target NoteApp"
+	@echo "  in-apk               ./build-apk.sh"
+	@echo "  in-build             ./conan-install.sh && ./configure.sh && ./build-apk.sh"
+	@echo "  in-build-poppler     ./build-poppler.sh   (requires running 'in-conan' first)"
+	@echo "  in-profile-detect    conan profile detect --force"
+	@echo "  in-clean             rm -rf build"
 
-build-image:
-	docker build -t $(IMAGE) $(DOCKER_BUILD_ARGS) .
-
-shell:
+enter-container:
 	docker run -it --rm $(DOCKER_RUN_ENV) \
+		--network host \
 		-v $(REPO_ROOT):/workspace \
 		-w $(WORKDIR) \
 		$(IMAGE) bash
 
-build:
-	docker run --rm $(DOCKER_RUN_ENV) \
-		-v $(REPO_ROOT):/workspace \
-		-w $(WORKDIR) \
-		$(IMAGE) bash -lc './build.sh'
+# Inside-container shortcuts -------------------------------------------------
+in-conan:
+	./conan-install.sh
 
-profile-detect:
-	docker run --rm $(DOCKER_RUN_ENV) \
-		-v $(REPO_ROOT):/workspace \
-		-w $(WORKDIR) \
-		$(IMAGE) bash -lc 'conan profile detect --force'
+in-configure:
+	./configure.sh
 
-clean:
+in-buildonly:
+	cmake --build --preset conan-debug --parallel --target NoteApp
+
+in-apk:
+	./build-apk.sh
+
+in-build:
+	./conan-install.sh && ./configure.sh && ./build-apk.sh
+
+in-build-poppler:
+	./build-poppler.sh
+
+in-profile-detect:
+	conan profile detect --force
+
+in-clean:
 	rm -rf $(CURDIR)/build
-
