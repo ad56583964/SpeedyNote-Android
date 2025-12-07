@@ -61,34 +61,37 @@ endif()
 # environment variable SPEEDYNOTE_POPPLER_SYSROOT. Build will fail if missing.
 
 set(SPEEDYNOTE_SRC_DIR "${SPEEDYNOTE_SRC_DIR}" CACHE PATH "SpeedyNote source dir")
-if(NOT SPEEDYNOTE_SRC_DIR)
-    get_filename_component(SPEEDYNOTE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../SpeedyNote" ABSOLUTE)
-else()
+if(SPEEDYNOTE_SRC_DIR)
     set(SPEEDYNOTE_SRC "${SPEEDYNOTE_SRC_DIR}")
-endif()
-if(EXISTS "${SPEEDYNOTE_SRC}/CMakeLists.txt")
-    message(STATUS "Including SpeedyNote from: ${SPEEDYNOTE_SRC}")
-    # Force Poppler usage
-    set(SPEEDYNOTE_ENABLE_POPPLER ON CACHE BOOL "" FORCE)
-    set(SPEEDYNOTE_ENABLE_SDL OFF CACHE BOOL "" )
-    set(SPEEDYNOTE_ENABLE_AUDIO OFF CACHE BOOL "" )
-
-    # Resolve Poppler sysroot
-    if(NOT SPEEDYNOTE_POPPLER_SYSROOT AND DEFINED ENV{SPEEDYNOTE_POPPLER_SYSROOT})
-        set(SPEEDYNOTE_POPPLER_SYSROOT "$ENV{SPEEDYNOTE_POPPLER_SYSROOT}")
-    endif()
-    if(NOT SPEEDYNOTE_POPPLER_SYSROOT)
-        # Default to sibling folder in build space
-        set(SPEEDYNOTE_POPPLER_SYSROOT "${CMAKE_CURRENT_LIST_DIR}/../poppler-android-sysroot")
-    endif()
-    if(NOT EXISTS "${SPEEDYNOTE_POPPLER_SYSROOT}")
-        message(FATAL_ERROR "Poppler sysroot not found: '${SPEEDYNOTE_POPPLER_SYSROOT}'. Set -D SPEEDYNOTE_POPPLER_SYSROOT=/path or env SPEEDYNOTE_POPPLER_SYSROOT.")
-    endif()
-
-    # Surface for child project
-    set(SPEEDYNOTE_POPPLER_SYSROOT "${SPEEDYNOTE_POPPLER_SYSROOT}" CACHE PATH "" FORCE)
-
-    add_subdirectory("${SPEEDYNOTE_SRC}" "${CMAKE_BINARY_DIR}/SpeedyNote")
 else()
-    message(WARNING "SpeedyNote source not found at: ${SPEEDYNOTE_SRC}")
+    # 仅使用当前仓库中的 SpeedyNote 子目录（例如通过 make speedynote-clone 获取）
+    get_filename_component(SPEEDYNOTE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/SpeedyNote" ABSOLUTE)
 endif()
+
+if(NOT EXISTS "${SPEEDYNOTE_SRC}/CMakeLists.txt")
+    message(FATAL_ERROR "SpeedyNote source not found at: '${SPEEDYNOTE_SRC}'. Clone it via 'make speedynote-clone' or set SPEEDYNOTE_SRC_DIR to an existing checkout.")
+endif()
+
+message(STATUS "Including SpeedyNote from: ${SPEEDYNOTE_SRC}")
+
+# Force Poppler usage
+set(SPEEDYNOTE_ENABLE_POPPLER ON CACHE BOOL "" FORCE)
+set(SPEEDYNOTE_ENABLE_SDL OFF CACHE BOOL "" )
+set(SPEEDYNOTE_ENABLE_AUDIO OFF CACHE BOOL "" )
+
+# Resolve Poppler sysroot
+if(NOT SPEEDYNOTE_POPPLER_SYSROOT AND DEFINED ENV{SPEEDYNOTE_POPPLER_SYSROOT})
+    set(SPEEDYNOTE_POPPLER_SYSROOT "$ENV{SPEEDYNOTE_POPPLER_SYSROOT}")
+endif()
+if(NOT SPEEDYNOTE_POPPLER_SYSROOT)
+    # Default to sibling folder in build space
+    set(SPEEDYNOTE_POPPLER_SYSROOT "${CMAKE_CURRENT_LIST_DIR}/../poppler-android-sysroot")
+endif()
+if(NOT EXISTS "${SPEEDYNOTE_POPPLER_SYSROOT}")
+    message(FATAL_ERROR "Poppler sysroot not found: '${SPEEDYNOTE_POPPLER_SYSROOT}'. Set -D SPEEDYNOTE_POPPLER_SYSROOT=/path or env SPEEDYNOTE_POPPLER_SYSROOT.")
+endif()
+
+# Surface for child project
+set(SPEEDYNOTE_POPPLER_SYSROOT "${SPEEDYNOTE_POPPLER_SYSROOT}" CACHE PATH "" FORCE)
+
+add_subdirectory("${SPEEDYNOTE_SRC}" "${CMAKE_BINARY_DIR}/SpeedyNote")

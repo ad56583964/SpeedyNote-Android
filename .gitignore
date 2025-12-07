@@ -21,3 +21,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# External SpeedyNote working copy (ignored; managed as separate git repo)
+SpeedyNote/

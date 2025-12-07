@@ -36,6 +36,14 @@ DOCKER_RUN_ENV += -e SPEEDYNOTE_POPPLER_SYSROOT=$(SPEEDYNOTE_POPPLER_SYSROOT)
 endif
 
 .PHONY: help build-image enter-container \
+        in-conan in-configure in-buildonly in-apk in-build in-build-poppler in-profile-detect in-clean \
+        speedynote-clone speedynote-pull
+
+SPEEDYNOTE_REPO ?= https://github.com/ad56583964/SpeedyNote.git
+SPEEDYNOTE_BRANCH ?= android/poppler-reorg
+SPEEDYNOTE_DIR ?= $(CURDIR)/SpeedyNote
+
+.PHONY: help build-image enter-container \
         in-conan in-configure in-buildonly in-apk in-build in-build-poppler in-profile-detect in-clean
 
 help:
@@ -49,6 +57,8 @@ help:
 	@echo "  in-build             ./conan-install.sh && ./configure.sh && ./build-apk.sh"
 	@echo "  in-build-poppler     ./build-poppler.sh   (requires running 'in-conan' first)"
 	@echo "  in-profile-detect    conan profile detect --force"
+	@echo "  speedynote-clone     Clone SpeedyNote into ./SpeedyNote (ignored by git)"
+	@echo "  speedynote-pull      Update existing ./SpeedyNote checkout"
 	@echo "  in-clean             rm -rf build"
 
 enter-container:
@@ -82,3 +92,20 @@ in-profile-detect:
 
 in-clean:
 	rm -rf $(CURDIR)/build
+
+speedynote-clone:
+	@if [ ! -d "$(SPEEDYNOTE_DIR)" ]; then \
+		echo "Cloning SpeedyNote (branch: $(SPEEDYNOTE_BRANCH)) into $(SPEEDYNOTE_DIR)"; \
+		git clone -b "$(SPEEDYNOTE_BRANCH)" "$(SPEEDYNOTE_REPO)" "$(SPEEDYNOTE_DIR)"; \
+	else \
+		echo "SpeedyNote already present at $(SPEEDYNOTE_DIR)"; \
+	fi
+
+speedynote-pull:
+	@if [ -d "$(SPEEDYNOTE_DIR)/.git" ]; then \
+		echo "Updating SpeedyNote in $(SPEEDYNOTE_DIR)"; \
+		git -C "$(SPEEDYNOTE_DIR)" pull --ff-only; \
+	else \
+		echo "SpeedyNote not cloned; run 'make speedynote-clone' first."; \
+		exit 1; \
+	fi
